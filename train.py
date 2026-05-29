@@ -25,7 +25,7 @@ from seq2seq_lstm import Seq2Seq
 #
 #
 # Linear Warmup + Decay:
-#   Epoch 0 → warmup_steps: LR tăng từ 0 --> lr_max (tránh diverge lúc đầu)
+#   Epoch 0 --> warmup_steps: LR tăng từ 0 --> lr_max (tránh diverge lúc đầu)
 #   warmup_steps --> cuối: LR giảm tuyến tính về 0  (hội tụ mượt)
 # Giair thích warmup:
 #   Lúc đầu model weights random --> gradient lớn, không ổn định
