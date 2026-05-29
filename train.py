@@ -113,3 +113,104 @@ def build_optimizer_and_scheduler(
 
     return optimizer, scheduler
 
+#### Phần Lưu checkpoint, đánh giá loss của epoch, nhận vô optimizer và model, val loader và train loader, cơ chế Early stopping
+import torch
+import torch.nn as nn
+from tqdm import tqdm
+import os
+
+def train_model(model, train_loader, val_loader, optimizer, epochs=15, patience=3, device="cuda"):
+    print(" BẮT ĐẦU QUÁ TRÌNH HUẤN LUYỆN...")
+    
+    best_val_loss = float('inf')
+    
+    # Biến đếm số lần Loss không giảm
+    epochs_no_improve = 0 
+
+    history_train_loss = []
+    history_val_loss = []
+    
+    for epoch in range(epochs):
+        # ==========================================
+        # 1. PHA HUẤN LUYỆN (TRAINING)
+        # ==========================================
+        model.train() 
+        total_train_loss = 0
+        train_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs} [Train]")
+        
+        for batch in train_bar:
+            input_ids = batch['input_ids'].to(device)
+            labels = batch['target_ids'].to(device)
+            
+            optimizer.zero_grad()
+            outputs = model(input_ids=input_ids, labels=labels)
+            loss = outputs.loss
+            
+            loss.backward()
+            optimizer.step()
+            
+            total_train_loss += loss.item()
+            train_bar.set_postfix({'loss': f"{loss.item():.4f}"})
+            
+        avg_train_loss = total_train_loss / len(train_loader)
+        
+        # ==========================================
+        # 2. PHA ĐÁNH GIÁ (VALIDATION)
+        # ==========================================
+        model.eval() 
+        total_val_loss = 0
+        val_bar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{epochs} [Val]")
+        
+        with torch.no_grad(): 
+            for batch in val_bar:
+                input_ids = batch['input_ids'].to(device)
+                labels = batch['target_ids'].to(device)
+                
+                outputs = model(input_ids=input_ids, labels=labels)
+                loss = outputs.loss
+                
+                total_val_loss += loss.item()
+                val_bar.set_postfix({'loss': f"{loss.item():.4f}"})
+                
+        avg_val_loss = total_val_loss / len(val_loader)
+        
+        # ==========================================
+        # 3. LOG, LƯU CHECKPOINT VÀ EARLY STOPPING
+        # ==========================================
+        print(f" Kết quả Epoch {epoch+1}: Train Loss = {avg_train_loss:.4f} | Val Loss = {avg_val_loss:.4f}")
+
+        # Ghi kết quả để vẽ hình
+        history_train_loss.append(avg_train_loss)
+        history_val_loss.append(avg_val_loss)
+
+        if avg_val_loss < best_val_loss:
+            print(f"    KỶ LỤC MỚI! Val Loss giảm từ {best_val_loss:.4f} xuống {avg_val_loss:.4f}.")
+            best_val_loss = avg_val_loss
+            
+            # Reset lại bộ đếm về 0
+            epochs_no_improve = 0 
+            
+            # ĐỊNH NGHĨA ĐƯỜNG DẪN THEO CẤU TRÚC THƯ MỤC CỦA BẠN
+            checkpoint_dir = os.path.join("outputs", "checkpoints")
+            
+            # Đảm bảo thư mục tồn tại trước khi lưu
+            os.makedirs(checkpoint_dir, exist_ok=True) 
+            
+            # LƯU TRỌNG SỐ LORA BẰNG HÀM CỦA HUGGING FACE
+            # Hàm save_pretrained sẽ tự tạo các file như adapter_model.bin/safetensors và adapter_config.json
+            model.save_pretrained(checkpoint_dir)
+            print(f"    Đã lưu thành công mô hình tốt nhất vào: {checkpoint_dir}")
+            
+        else:
+            # Tăng bộ đếm nếu mô hình không tiến bộ
+            epochs_no_improve += 1
+            print(f"    Val Loss không giảm. Cảnh báo Overfitting lần {epochs_no_improve}/{patience}.")
+            
+            # Kiểm tra xem đã hết kiên nhẫn chưa
+            if epochs_no_improve >= patience:
+                print(f" ĐÃ KÍCH HOẠT EARLY STOPPING! Dừng huấn luyện sớm ở Epoch {epoch+1} để tránh học vẹt.")
+                break # Phá vỡ vòng lặp for, kết thúc train luôn!
+            
+    print(" QUÁ TRÌNH HUẤN LUYỆN ĐÃ KẾT THÚC!")
+
+
