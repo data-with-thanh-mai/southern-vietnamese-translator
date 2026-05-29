@@ -21,7 +21,7 @@ from seq2seq_lstm import Seq2Seq
 # OPTIMIZER & LR SCHEDULER
 # AdamW = Adam + Weight Decay tách biệt
 #   Adam thông thường: weight decay bị "lẫn" vào adaptive gradient
-#   AdamW: áp weight decay trực tiếp lên weight → regularize đúng hơn
+#   AdamW: áp weight decay trực tiếp lên weight --> regularize đúng hơn
 #
 #
 # Linear Warmup + Decay:
@@ -29,8 +29,8 @@ from seq2seq_lstm import Seq2Seq
 #   warmup_steps --> cuối: LR giảm tuyến tính về 0  (hội tụ mượt)
 # Giair thích warmup:
 #   Lúc đầu model weights random --> gradient lớn, không ổn định
-#   Nếu LR cao ngay từ đầu --> bước nhảy quá lớn → diverge
-#   Warmup: "hâm nóng" từ từ trước khi chạy full speed
+#   Nếu LR cao ngay từ đầu --> bước nhảy quá lớn --> diverge
+#   Warmup: "hâm nóng" từ từ trước khi chạy full lr
 
 def build_optimizer_and_scheduler(
     model        : nn.Module,
