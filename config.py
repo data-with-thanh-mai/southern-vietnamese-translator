@@ -4,20 +4,26 @@ SEED = 42
 
 # -------------PATHS & DIRECTORIES -------------
 # Cấu trúc cho Google Colab / Kaggle
-BASE_DIR   = "/content/drive/MyDrive/"
-DATA_DIR   = BASE_DIR + "dataset/processed/"
-CKPT_DIR   = BASE_DIR + "checkpoints/"
-LOG_DIR    = BASE_DIR + "logs/"
-FIG_DIR    = BASE_DIR + "figures/"
+import os
 
-TRAIN_PATH = DATA_DIR + "train.csv"
-VAL_PATH   = DATA_DIR + "val.csv"
-TEST_PATH  = DATA_DIR + "test.csv"
+SEED = 42
+
+# -------------PATHS & DIRECTORIES (ĐƯỜNG DẪN CỤC BỘ) -------------
+# Sử dụng đường dẫn tương đối tính từ thư mục gốc của dự án
+DATA_DIR   = "data/processed/"
+CKPT_DIR   = "outputs/checkpoints/"
+LOG_DIR    = "outputs/logs/"
+FIG_DIR    = "outputs/figures/"
+
+# Đường dẫn sẽ tự động nối thành "data/processed/train.csv"
+TRAIN_PATH = DATA_DIR + "train.csv"  
+VAL_PATH   = DATA_DIR + "val.csv"    
+TEST_PATH  = DATA_DIR + "test.csv"   
 VOCAB_PATH = DATA_DIR + "vocab_word_level.json" 
 
+# Tự động tạo các thư mục lưu checkpoint và log nếu chưa tồn tại
 for d in [CKPT_DIR, LOG_DIR, FIG_DIR]:
     os.makedirs(d, exist_ok=True)
-
 # -----------------------DATA----------------------------------
 MAX_SRC_LEN =  163  
 MAX_TGT_LEN =  145  
