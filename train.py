@@ -198,7 +198,7 @@ if __name__ == "__main__":
     if config.MODEL_TYPE in ["transformer_full", "transformer_lora"]:
         from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
         
-        tokenizer = AutoTokenizer.from_pretrained(config.active_cfg["model_name"])
+        tokenizer = AutoTokenizer.from_pretrained(config.active_cfg["model_name"],use_fast=False)
         model = AutoModelForSeq2SeqLM.from_pretrained(config.active_cfg["model_name"],use_fast=False)
         
         if config.MODEL_TYPE == "transformer_lora":
