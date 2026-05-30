@@ -294,8 +294,7 @@ if __name__ == "__main__":
             model.print_trainable_parameters() 
             
     elif config.MODEL_TYPE == "lstm":
-        # Khởi tạo LSTM của Minh
-        tokenizer = WordLevelTokenizer.load_from_json(config.VOCAB_PATH)
+        # Khởi tạo LSTM 
         model = Seq2Seq(config.active_cfg) 
         print(f"✅ Khởi tạo thành công mạng LSTM ({config.active_cfg['n_layers']} layers).")
         
