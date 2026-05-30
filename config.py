@@ -1,6 +1,4 @@
-import os
 
-SEED = 42
 
 # -------------PATHS & DIRECTORIES -------------
 # Cấu trúc cho Google Colab / Kaggle
