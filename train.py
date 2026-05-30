@@ -274,7 +274,7 @@ if __name__ == "__main__":
         from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
         
         # Tải bộ Tokenizer của viT5
-        tokenizer = AutoTokenizer.from_pretrained(config.active_cfg["model_name"])
+        tokenizer = AutoTokenizer.from_pretrained(config.active_cfg["model_name"], use_fast=False)
         # Tải mạng neural của viT5
         model = AutoModelForSeq2SeqLM.from_pretrained(config.active_cfg["model_name"])
         
