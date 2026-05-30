@@ -18,7 +18,7 @@ class DialectDataset(Dataset):
 
     def __getitem__(self, idx):
         item = self.data.iloc[idx]
-        source_text = str(item['source_text'])
+        source_text = str(item['input_text'])
         target_text = str(item['target_text'])
 
         # ==========================================
