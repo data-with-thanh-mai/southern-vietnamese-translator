@@ -16,6 +16,7 @@ scikit-learn
 transformers
 peft
 accelerate
+sentencepiece
 
 # ==========================================
 # 4. MLOPS & VISUALIZATION (BIỂU ĐỒ)
