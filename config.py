@@ -14,7 +14,7 @@ LOG_DIR    = "outputs/logs/"
 FIG_DIR    = "outputs/figures/"
 
 # Đường dẫn sẽ tự động nối thành "data/processed/train.csv"
-TRAIN_PATH = DATA_DIR + "train.csv"  
+TRAIN_PATH = DATA_DIR + "train(2).csv"  
 VAL_PATH   = DATA_DIR + "val.csv"    
 TEST_PATH  = DATA_DIR + "test.csv"   
 VOCAB_PATH = DATA_DIR + "vocab_word_level.json" 
@@ -133,7 +133,7 @@ def get_cfg(model_name: str) -> dict:
 # TRẠM TRUNG CHUYỂN (ÉP KHỚP VỚI TRAIN.PY)
 # ==============================================================
 # BẠN ĐỔI CHỮ BÊN DƯỚI THÀNH "lstm", "vit5", HOẶC "lora" ĐỂ CHẠY
-CHOSEN_MODEL = "lora"
+CHOSEN_MODEL = "lstm"
 
 active_cfg = get_cfg(CHOSEN_MODEL)
 
