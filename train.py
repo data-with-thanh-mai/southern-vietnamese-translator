@@ -261,7 +261,7 @@ if __name__ == "__main__":
     print("⏳ Đang import dữ liệu từ ổ đĩa...")
     try:
         train_df = pd.read_csv(config.TRAIN_PATH)
-        val_df = pd.read_csv(config.VAL_PATH)
+        val_df = pd.read_csv(config.TEST_PATH)
         print(f"✅ Đã nạp thành công: {len(train_df)} câu Train | {len(val_df)} câu Val")
     except FileNotFoundError as e:
         print(f"❌ LỖI: Không tìm thấy dữ liệu! Vui lòng kiểm tra lại đường dẫn trong config.py\nChi tiết: {e}")
