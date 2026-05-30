@@ -167,6 +167,9 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
 # ==============================================================================
 # KHỐI KHỞI CHẠY THỰC TẾ (EntryPoint)
 # ==============================================================================
+# ==============================================================================
+# KHỐI KHỞI CHẠY THỰC TẾ (EntryPoint)
+# ==============================================================================
 if __name__ == "__main__":
     import pandas as pd
     import random
@@ -186,64 +189,51 @@ if __name__ == "__main__":
     print("⏳ Đang import dữ liệu từ ổ đĩa...")
     try:
         train_df = pd.read_csv(config.TRAIN_PATH)
-        val_df = pd.read_csv(config.VAL_PATH) # Sửa lỗi Data Leakage ở đây
+        val_df = pd.read_csv(config.VAL_PATH) 
         print(f"✅ Đã nạp thành công: {len(train_df)} câu Train | {len(val_df)} câu Val")
     except FileNotFoundError as e:
         print(f"❌ LỖI: Không tìm thấy dữ liệu! Vui lòng kiểm tra lại đường dẫn trong config.py\nChi tiết: {e}")
         exit()
     
-    # 2. KHỞI TẠO TOKENIZER & MODEL 
+    # 2. KHỞI TẠO TOKENIZER & MODEL (SỬ DỤNG CÁC HÀM BUILD ĐÃ VIẾT)
     print(f"🤖 Đang chuẩn bị mô hình: {config.MODEL_TYPE.upper()}...")
     
-    if config.MODEL_TYPE in ["transformer_full", "transformer_lora"]:
-        from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-        
-        tokenizer = AutoTokenizer.from_pretrained(config.active_cfg["model_name"],use_fast=False)
-        model = AutoModelForSeq2SeqLM.from_pretrained(config.active_cfg["model_name"])
-        
-        if config.MODEL_TYPE == "transformer_lora":
-            from peft import get_peft_model, LoraConfig, TaskType
-            print("🗜️ Đang bọc lớp LoRA siêu nhẹ vào mô hình...")
-            peft_config = LoraConfig(
-                task_type=TaskType.SEQ_2_SEQ_LM,
-                r=config.active_cfg["lora_r"],
-                lora_alpha=config.active_cfg["lora_alpha"],
-                lora_dropout=config.active_cfg["lora_dropout"],
-                target_modules=config.active_cfg["target_modules"]
-            )
-            model = get_peft_model(model, peft_config)
-            model.print_trainable_parameters() 
+    if config.MODEL_TYPE == "transformer_lora":
+        # Gọi hàm build từ file của Ngọc
+        from source.models.transformer_lora import build_lora_model
+        model, tokenizer = build_lora_model(config.active_cfg, device=device)
+            
+    elif config.MODEL_TYPE == "transformer_full":
+        # Gọi hàm build từ file của Mai
+        from source.models.transformer_full import build_transformer_full_ft
+        model, tokenizer = build_transformer_full_ft(
+            model_name=config.active_cfg["model_name"], 
+            device=device, 
+            use_fast=False # Khóa an toàn chống lỗi Tokenizer
+        )
             
     elif config.MODEL_TYPE == "lstm":
-        # Lưu ý: Cần import WordLevelTokenizer (hoặc custom tokenizer của Minh) để chạy DataLoader
-        # Nếu Minh đặt tên class khác thì bạn nhớ đổi tên lại nha
+        # Lắp ráp mô hình của Minh
         from source.data.data_loader import WordLevelTokenizer
-        from source.models.seq2seq_lstm import Encoder, Decoder
+        from source.models.seq2seq_lstm import Encoder, Decoder, Seq2Seq
         
         tokenizer = WordLevelTokenizer.load_from_json(config.VOCAB_PATH)
-        cfg = config.active_cfg
+        cfg = config.active_cfg 
         
         encoder = Encoder(
-            vocab_size = cfg["vocab_size"],
-            embed_dim  = cfg["embed_dim"],
-            hidden_dim = cfg["hidden_dim"],
-            n_layers   = cfg["n_layers"],
-            dropout    = cfg["dropout"],
-            pad_idx    = cfg["pad_idx"]
+            vocab_size=cfg["vocab_size"], embed_dim=cfg["embed_dim"],
+            hidden_dim=cfg["hidden_dim"], n_layers=cfg["n_layers"],
+            dropout=cfg["dropout"], pad_idx=config.PAD_IDX
         )
         decoder = Decoder(
-            vocab_size  = cfg["vocab_size"],
-            embed_dim   = cfg["embed_dim"],
-            hidden_dim  = cfg["hidden_dim"],
-            encoder_dim = cfg["hidden_dim"] * 2,  
-            n_layers    = cfg["n_layers"],
-            dropout     = cfg["dropout"],
-            pad_idx     = cfg["pad_idx"]
+            vocab_size=cfg["vocab_size"], embed_dim=cfg["embed_dim"],
+            hidden_dim=cfg["hidden_dim"], encoder_dim=cfg["hidden_dim"] * 2, 
+            n_layers=cfg["n_layers"], dropout=cfg["dropout"],
+            pad_idx=config.PAD_IDX
         )
         model = Seq2Seq(encoder, decoder, device)
+        model = model.to(device)
         print(f"✅ Khởi tạo thành công mạng LSTM ({cfg['n_layers']} layers).")
-        
-    model = model.to(device)
 
     # 3. ĐÓNG GÓI DATALOADER
     print("📦 Đang đóng gói dữ liệu vào DataLoader...")
@@ -254,7 +244,7 @@ if __name__ == "__main__":
         max_source_len=config.MAX_SRC_LEN,
         max_target_len=config.MAX_TGT_LEN,
         is_train=True,
-        model_type=config.MODEL_TYPE # TRUYỀN CỜ HIỆU VÀO ĐÂY
+        model_type=config.MODEL_TYPE 
     )
     
     val_loader = create_dataloader(
@@ -264,7 +254,7 @@ if __name__ == "__main__":
         max_source_len=config.MAX_SRC_LEN,
         max_target_len=config.MAX_TGT_LEN,
         is_train=False,
-        model_type=config.MODEL_TYPE # TRUYỀN CỜ HIỆU VÀO ĐÂY
+        model_type=config.MODEL_TYPE 
     )
 
     # 4. KÍCH HOẠT HUẤN LUYỆN
