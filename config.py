@@ -110,7 +110,7 @@ def get_cfg(model_name: str) -> dict:
 # ==============================================================
 # TRẠM TRUNG CHUYỂN
 # ==============================================================
-CHOSEN_MODEL = "lora" # Đổi thành "lstm" hoặc "vit5" nếu muốn
+CHOSEN_MODEL = "vit5" # Đổi thành "lstm" hoặc "vit5" nếu muốn
 
 active_cfg = get_cfg(CHOSEN_MODEL)
 
