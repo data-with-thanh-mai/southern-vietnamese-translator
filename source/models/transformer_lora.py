@@ -9,7 +9,7 @@ def build_lora_model(cfg, device="cuda"):
     print(f"🤖 Đang khởi tạo viT5 với LoRA (r={cfg['lora_r']})...")
     
     # 1. Tải tokenizer và base model
-    tokenizer = AutoTokenizer.from_pretrained(cfg["model_name"])
+    tokenizer = AutoTokenizer.from_pretrained(cfg["model_name"],use_fast=False)
     base_model = AutoModelForSeq2SeqLM.from_pretrained(cfg["model_name"])
     
     # 2. Cấu hình LoRA lấy từ config
