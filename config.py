@@ -57,6 +57,7 @@ LSTM_CFG = {
     "patience"    : 5,
     "min_delta"   : 1e-4,
     "ckpt_path"   : CKPT_DIR + "seq2seq_best.pth",
+    "pad_idx"     :0
 }
 
 # ==============================================================
