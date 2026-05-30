@@ -134,7 +134,7 @@ def get_cfg(model_name: str) -> dict:
 # TRẠM TRUNG CHUYỂN (ÉP KHỚP VỚI TRAIN.PY)
 # ==============================================================
 # BẠN ĐỔI CHỮ BÊN DƯỚI THÀNH "lstm", "vit5", HOẶC "lora" ĐỂ CHẠY
-CHOSEN_MODEL = "lstm"
+CHOSEN_MODEL = "lora"
 
 active_cfg = get_cfg(CHOSEN_MODEL)
 
