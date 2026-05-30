@@ -167,9 +167,6 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
 # ==============================================================================
 # KHỐI KHỞI CHẠY THỰC TẾ (EntryPoint)
 # ==============================================================================
-# ==============================================================================
-# KHỐI KHỞI CHẠY THỰC TẾ (EntryPoint)
-# ==============================================================================
 if __name__ == "__main__":
     import pandas as pd
     import random
@@ -216,8 +213,8 @@ if __name__ == "__main__":
         # Lắp ráp mô hình của Minh
         from source.data.data_loader import SyllableSubwordTokenizer
         from source.models.seq2seq_lstm import Encoder, Decoder, Seq2Seq
-        
-        tokenizer = WordLevelTokenizer.load_from_json(config.VOCAB_PATH)
+        tokenizer = SyllableSubwordTokenizer()
+        tokenizer.load(config.VOCAB_PATH)
         cfg = config.active_cfg 
         
         encoder = Encoder(
