@@ -17,6 +17,7 @@ transformers
 peft
 accelerate
 sentencepiece
+protobuf         # <-- Bổ sung thêm để chạy mượt tokenizer viT5
 
 # ==========================================
 # 4. MLOPS & VISUALIZATION (BIỂU ĐỒ)
