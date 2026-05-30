@@ -52,21 +52,32 @@ class DialectDataset(Dataset):
         # ==========================================
         # NHÁNH 2: XỬ LÝ CHO LSTM (Của Minh)
         # ==========================================
+        # ==========================================
+        # NHÁNH 2: XỬ LÝ CHO LSTM 
+        # ==========================================
         elif self.model_type == "lstm":
-            # Chuyển chuỗi thành danh sách các token ID
+            import config 
+            
+            # 1. Gọi hàm encode từ SyllableSubwordTokenizer
+            # Hàm này đã tự động bọc [CLS] ở đầu và [SEP] ở cuối rồi!
             src_ids = self.tokenizer.encode(source_text)
             trg_ids = self.tokenizer.encode(target_text)
 
-            # Cắt ngắn nếu câu dài hơn mức cho phép (Truncation thủ công)
+            # 2. Cắt ngắn nếu câu dài hơn mức cho phép (Truncation)
             src_ids = src_ids[:self.max_source_len]
             trg_ids = trg_ids[:self.max_target_len]
 
-            # Lấy padding index (Mặc định là 0 nếu không tìm thấy)
-            pad_idx = getattr(self.tokenizer, 'pad_token_id', 0)
-            
-            # Bơm thêm số 0 (PAD) vào cuối cho đủ độ dài (Padding thủ công)
+            # 3. Bơm thêm số 0 (PAD_IDX) vào cuối cho đủ độ dài
+            pad_idx = config.PAD_IDX
             src_ids = src_ids + [pad_idx] * (self.max_source_len - len(src_ids))
             trg_ids = trg_ids + [pad_idx] * (self.max_target_len - len(trg_ids))
+
+            return {
+                'input_ids': torch.tensor(src_ids, dtype=torch.long),
+                # Mask dummy để đồng bộ form với nhánh Transformer
+                'attention_mask': torch.tensor([1 if token != pad_idx else 0 for token in src_ids], dtype=torch.long),
+                'labels': torch.tensor(trg_ids, dtype=torch.long)
+            }
 
             return {
                 'input_ids': torch.tensor(src_ids, dtype=torch.long),
