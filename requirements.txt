@@ -14,7 +14,7 @@ scikit-learn
 # 3. TRANSFORMER & LORA
 # ==========================================
 transformers==4.38.2
-peft
+peft==0.10.0
 accelerate
 sentencepiece
 protobuf         # <-- Bổ sung thêm để chạy mượt tokenizer viT5
