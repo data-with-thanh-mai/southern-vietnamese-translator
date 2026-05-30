@@ -1,22 +1,14 @@
-
-import argparse
-import time
-import math
-import json
+import os
 import torch
 import torch.nn as nn
-import pandas as pd
-import numpy as np
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.tensorboard import SummaryWriter
-
-from config     import *
-from utils      import set_seed, EarlyStopping, save_checkpoint, load_checkpoint
-from data_loader import get_dataloaders, WordLevelTokenizer
-from seq2seq_lstm import Seq2Seq
-
-
+from tqdm import tqdm
+from src.data.data_loader import get_dataloaders, WordLevelTokenizer
+from src.models.seq2seq_lstm import Seq2Seq
+from src.utils import set_seed, EarlyStopping, save_checkpoint, load_checkpoint
+import config
 
 # OPTIMIZER & LR SCHEDULER
 # AdamW = Adam + Weight Decay tách biệt
@@ -58,7 +50,7 @@ def build_optimizer_and_scheduler(
                 p for n, p in model.named_parameters()
                 if not any(nd in n for nd in no_decay) and p.requires_grad
             ],
-            "weight_decay": cfg.get("weight_decay", 1e-4),
+            "weight_decay": getattr(cfg, "WEIGHT_DECAY", 1e-4),
         },
         {
             # Params không có weight decay: bias, layer norm
@@ -78,12 +70,12 @@ def build_optimizer_and_scheduler(
     """
     optimizer = AdamW(
         param_groups,
-        lr=cfg["lr"],
+        lr=cfg.LEARNING_RATE,
         betas=(0.9,0.999),   # beta mặc định nên giữ nguyên
         eps=1e-8 #sai số
     )
     # ---Linear Warmup + Linear Decay Scheduler ------
-    warmup_steps = int(total_steps * cfg.get("warmup_ratio", 0.1))
+    warmup_steps = int(total_steps * getattr(cfg, "WARMUP_RATIO", 0.1))
 
     def lr_lambda(current_step: int) -> float:
         """
@@ -105,112 +97,149 @@ def build_optimizer_and_scheduler(
     scheduler = LambdaLR(optimizer, lr_lambda)
 
     # Log thông tin scheduler
-    print(f"[Optimizer] AdamW | lr={cfg['lr']} | "
-          f"weight_decay={cfg.get('weight_decay', 1e-4)}")
+    print(f"[Optimizer] AdamW | lr={cfg.LEARNING_RATE} | "
+          f"weight_decay={getattr(cfg, 'WEIGHT_DECAY', 1e-4)}")
     print(f"[Scheduler] Linear Warmup + Decay | "
           f"warmup={warmup_steps}/{total_steps} steps "
-          f"({cfg.get('warmup_ratio', 0.1)*100:.0f}%)")
+          f"({getattr(cfg, 'WARMUP_RATIO', 0.1)*100:.0f}%)")
 
     return optimizer, scheduler
 
-#### Phần Lưu checkpoint, đánh giá loss của epoch, nhận vô optimizer và model, val loader và train loader, cơ chế Early stopping
-import torch
-import torch.nn as nn
-from tqdm import tqdm
-import os
 
-def train_model(model, train_loader, val_loader, optimizer, epochs=15, patience=3, device="cuda"):
-    print(" BẮT ĐẦU QUÁ TRÌNH HUẤN LUYỆN...")
+
+def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda"):
+    print("BẮT ĐẦU QUÁ TRÌNH HUẤN LUYỆN.")
     
+    # MLOps Setup
+    os.makedirs(config.LOG_DIR, exist_ok=True)
+    writer = SummaryWriter(log_dir=config.LOG_DIR)
+    
+    # Biến Early Stopping
     best_val_loss = float('inf')
-    
-    # Biến đếm số lần Loss không giảm
+    # Biến đếm số lần Loss không giảm (Comment của Ngọc)
     epochs_no_improve = 0 
-
-    history_train_loss = []
-    history_val_loss = []
     
-    for epoch in range(epochs):
+    # Gọi optimizer và scheduler 
+    total_steps = len(train_loader) * config.NUM_EPOCHS
+    optimizer, scheduler = build_optimizer_and_scheduler(model, config, total_steps)
+
+    # Khởi tạo hàm loss cho lstm- bỏ qua padding 
+    if config.MODEL_TYPE == "lstm":
+        criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
+
+    for epoch in range(config.NUM_EPOCHS):
         # ==========================================
         # 1. PHA HUẤN LUYỆN (TRAINING)
         # ==========================================
         model.train() 
         total_train_loss = 0
-        train_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs} [Train]")
+        train_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{config.NUM_EPOCHS} [Train]")
         
-        for batch in train_bar:
+        for step, batch in enumerate(train_bar):
             input_ids = batch['input_ids'].to(device)
-            labels = batch['target_ids'].to(device)
+            attention_mask = batch.get('attention_mask', None)
+            labels = batch['labels'].to(device)
+            
+            if attention_mask is not None:
+                attention_mask = attention_mask.to(device)
             
             optimizer.zero_grad()
-            outputs = model(input_ids=input_ids, labels=labels)
-            loss = outputs.loss
+            
+            if config.MODEL_TYPE in ["transformer_full", "transformer_lora"]:
+                labels[labels == tokenizer.pad_token_id] = -100
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+                loss = outputs.loss
+            elif config.MODEL_TYPE == "lstm":
+                outputs = model(src=input_ids, trg=labels, teacher_forcing_ratio=config.TF_RATIO)
+                loss = criterion(outputs.view(-1, outputs.size(-1)), labels.view(-1))
             
             loss.backward()
+            # Dùng clip-norm 
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0) 
+            
             optimizer.step()
+            scheduler.step()
             
             total_train_loss += loss.item()
             train_bar.set_postfix({'loss': f"{loss.item():.4f}"})
             
+            # Ghi log Tensorboard
+            global_step = epoch * len(train_loader) + step
+            writer.add_scalar("Train/Batch_Loss", loss.item(), global_step)
+            writer.add_scalar("Train/Learning_Rate", scheduler.get_last_lr()[0], global_step)
+            
         avg_train_loss = total_train_loss / len(train_loader)
+        writer.add_scalar("Train/Epoch_Loss", avg_train_loss, epoch)
         
         # ==========================================
         # 2. PHA ĐÁNH GIÁ (VALIDATION)
         # ==========================================
         model.eval() 
         total_val_loss = 0
-        val_bar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{epochs} [Val]")
+        val_bar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{config.NUM_EPOCHS} [Val]")
         
         with torch.no_grad(): 
             for batch in val_bar:
                 input_ids = batch['input_ids'].to(device)
-                labels = batch['target_ids'].to(device)
+                attention_mask = batch.get('attention_mask', None)
+                labels = batch['labels'].to(device)
                 
-                outputs = model(input_ids=input_ids, labels=labels)
-                loss = outputs.loss
+                if attention_mask is not None:
+                    attention_mask = attention_mask.to(device)
+    
+                if config.MODEL_TYPE in ["transformer_full", "transformer_lora"]:
+                    labels[labels == tokenizer.pad_token_id] = -100
+                    outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+                    loss = outputs.loss
+                elif config.MODEL_TYPE == "lstm":
+                    # Tắt teacher forcing 
+                    outputs = model(src=input_ids, trg=labels, teacher_forcing_ratio=0.0)
+                    loss = criterion(outputs.view(-1, outputs.size(-1)), labels.view(-1))
                 
                 total_val_loss += loss.item()
                 val_bar.set_postfix({'loss': f"{loss.item():.4f}"})
                 
         avg_val_loss = total_val_loss / len(val_loader)
+        writer.add_scalar("Val/Epoch_Loss", avg_val_loss, epoch)
         
         # ==========================================
-        # 3. LOG, LƯU CHECKPOINT VÀ EARLY STOPPING
+        # 3. LOG, LƯU CHECKPOINT VÀ EARLY STOPPING 
         # ==========================================
-        print(f" Kết quả Epoch {epoch+1}: Train Loss = {avg_train_loss:.4f} | Val Loss = {avg_val_loss:.4f}")
-
-        # Ghi kết quả để vẽ hình
-        history_train_loss.append(avg_train_loss)
-        history_val_loss.append(avg_val_loss)
+        print(f"Kết quả Epoch {epoch+1}: Train Loss = {avg_train_loss:.4f} | Val Loss = {avg_val_loss:.4f}")
 
         if avg_val_loss < best_val_loss:
-            print(f"    KỶ LỤC MỚI! Val Loss giảm từ {best_val_loss:.4f} xuống {avg_val_loss:.4f}.")
+            print(f"KỶ LỤC MỚI! Val Loss giảm từ {best_val_loss:.4f} xuống {avg_val_loss:.4f}.")
             best_val_loss = avg_val_loss
             
-            # Reset lại bộ đếm về 0
+            # Reset lại bộ đếm về 0 
             epochs_no_improve = 0 
             
-            # ĐỊNH NGHĨA ĐƯỜNG DẪN THEO CẤU TRÚC THƯ MỤC CỦA BẠN
-            checkpoint_dir = os.path.join("outputs", "checkpoints")
+            # ĐỊNH NGHĨA ĐƯỜNG DẪN THEO CẤU TRÚC THƯ MỤC CỦA BẠN 
+            checkpoint_dir = os.path.join("outputs", "checkpoints", "best_model")
             
-            # Đảm bảo thư mục tồn tại trước khi lưu
+            # Đảm bảo thư mục tồn tại trước khi lưu 
             os.makedirs(checkpoint_dir, exist_ok=True) 
             
-            # LƯU TRỌNG SỐ LORA BẰNG HÀM CỦA HUGGING FACE
+            # LƯU TRỌNG SỐ LORA BẰNG HÀM CỦA HUGGING FACE 
             # Hàm save_pretrained sẽ tự tạo các file như adapter_model.bin/safetensors và adapter_config.json
-            model.save_pretrained(checkpoint_dir)
-            print(f"    Đã lưu thành công mô hình tốt nhất vào: {checkpoint_dir}")
+            if config.MODEL_TYPE in ["transformer_full", "transformer_lora"]:
+                model.save_pretrained(checkpoint_dir)
+                tokenizer.save_pretrained(checkpoint_dir) 
+            elif config.MODEL_TYPE == "lstm":
+                torch.save(model.state_dict(), os.path.join(checkpoint_dir, "lstm_best.pth"))
+                
+            print(f"Đã lưu thành công mô hình tốt nhất vào: {checkpoint_dir}")
             
         else:
-            # Tăng bộ đếm nếu mô hình không tiến bộ
+            # Tăng bộ đếm nếu mô hình không tiến bộ 
             epochs_no_improve += 1
-            print(f"    Val Loss không giảm. Cảnh báo Overfitting lần {epochs_no_improve}/{patience}.")
+            print(f"Val Loss không giảm. Cảnh báo Overfitting lần {epochs_no_improve}/{config.PATIENCE}.")
             
-            # Kiểm tra xem đã hết kiên nhẫn chưa
-            if epochs_no_improve >= patience:
-                print(f" ĐÃ KÍCH HOẠT EARLY STOPPING! Dừng huấn luyện sớm ở Epoch {epoch+1} để tránh học vẹt.")
-                break # Phá vỡ vòng lặp for, kết thúc train luôn!
+            # Kiểm tra xem đã hết kiên nhẫn chưa 
+            if epochs_no_improve >= config.PATIENCE:
+                print(f"ĐÃ KÍCH HOẠT EARLY STOPPING! Dừng huấn luyện sớm ở Epoch {epoch+1} để tránh học vẹt.")
+                break # Phá vỡ vòng lặp for, kết thúc train luôn! 
             
-    print(" QUÁ TRÌNH HUẤN LUYỆN ĐÃ KẾT THÚC!")
-
-
+    writer.close()
+    print("QUÁ TRÌNH HUẤN LUYỆN ĐĐ KẾT THÚC!")
+    return model
