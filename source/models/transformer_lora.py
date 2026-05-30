@@ -1,5 +1,3 @@
-!pip install transformers peft
-
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 from peft import LoraConfig, get_peft_model, TaskType
 
