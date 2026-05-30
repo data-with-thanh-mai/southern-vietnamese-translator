@@ -214,7 +214,7 @@ if __name__ == "__main__":
             
     elif config.MODEL_TYPE == "lstm":
         # Lắp ráp mô hình của Minh
-        from source.data.data_loader import WordLevelTokenizer
+        from source.data.data_loader import SyllableSubwordTokenizer
         from source.models.seq2seq_lstm import Encoder, Decoder, Seq2Seq
         
         tokenizer = WordLevelTokenizer.load_from_json(config.VOCAB_PATH)
