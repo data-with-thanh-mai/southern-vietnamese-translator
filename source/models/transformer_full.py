@@ -1,30 +1,34 @@
 import torch
-from transformers import AutoModelForSeq2SeqLM
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
-def build_transformer_full_ft(model_name="VietAI/vit5-base", device="cpu"):
+def build_transformer_full_ft(model_name="VietAI/vit5-base", device="cpu", use_fast=False):
     """
-    Khởi tạo mô hình Transformer pre-trained cho quá trình Full Fine-Tuning.
+    Khởi tạo mô hình Transformer pre-trained và Tokenizer cho quá trình Full Fine-Tuning.
     
     Args:
-        model_name (str): Tên mô hình trên Hugging Face Hub (vd: 'VietAI/vit5-base' hoặc 'vinai/bartpho-word').
+        model_name (str): Tên mô hình trên Hugging Face Hub.
         device (str): Thiết bị tính toán ('cuda' hoặc 'cpu').
+        use_fast (bool): Tắt Fast Tokenizer để tránh lỗi KeyError: 0 của viT5.
         
     Returns:
-        model: Mô hình đã được mở khóa toàn bộ trọng số.
+        model, tokenizer: Mô hình đã mở khóa và bộ băm từ chuẩn.
     """
-    print(f"[*] Đang tải pre-trained model: {model_name}...")
+    print(f"[*] Đang tải pre-trained model và tokenizer: {model_name}...")
     
-    # Nạp mô hình Seq2Seq từ Hugging Face
+    # 1. Tải Tokenizer và TẮT chế độ fast
+    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=use_fast)
+    
+    # 2. Nạp mô hình Seq2Seq từ Hugging Face
     model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
     
-    # Đảm bảo toàn bộ trọng số được MỞ KHÓA (requires_grad = True) cho Full Fine-Tuning
+    # 3. Đảm bảo toàn bộ trọng số được MỞ KHÓA (requires_grad = True) cho Full Fine-Tuning
     for param in model.parameters():
         param.requires_grad = True
         
     model.to(device)
     print("[*] Tải mô hình thành công và đã đẩy lên thiết bị:", device)
     
-    return model
+    return model, tokenizer
 
 def count_parameters(model):
     """
@@ -43,5 +47,3 @@ def count_parameters(model):
     print("-" * 50)
     
     return total_params, trainable_params
-
-
