@@ -251,7 +251,7 @@ if __name__ == "__main__":
     import pandas as pd
     
     # Cố định seed để kết quả ổn định
-    set_seed(config.SEED)
+    
     
     # Chọn thiết bị (Bật GPU trên Kaggle)
     device = "cuda" if torch.cuda.is_available() else "cpu"
