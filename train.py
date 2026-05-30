@@ -199,7 +199,7 @@ if __name__ == "__main__":
         from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
         
         tokenizer = AutoTokenizer.from_pretrained(config.active_cfg["model_name"])
-        model = AutoModelForSeq2SeqLM.from_pretrained(config.active_cfg["model_name"])
+        model = AutoModelForSeq2SeqLM.from_pretrained(config.active_cfg["model_name"],use_fast=False)
         
         if config.MODEL_TYPE == "transformer_lora":
             from peft import get_peft_model, LoraConfig, TaskType
