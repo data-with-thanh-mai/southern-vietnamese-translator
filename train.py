@@ -294,9 +294,29 @@ if __name__ == "__main__":
             model.print_trainable_parameters() 
             
     elif config.MODEL_TYPE == "lstm":
-        # Khởi tạo LSTM 
-        model = Seq2Seq(config.active_cfg) 
-        print(f"✅ Khởi tạo thành công mạng LSTM ({config.active_cfg['n_layers']} layers).")
+        from source.models.seq2seq_lstm import Encoder, Decoder
+    
+        cfg = config.active_cfg
+        
+        encoder = Encoder(
+            vocab_size = cfg["vocab_size"],
+            embed_dim  = cfg["embed_dim"],
+            hidden_dim = cfg["hidden_dim"],
+            n_layers   = cfg["n_layers"],
+            dropout    = cfg["dropout"],
+            pad_idx    = cfg["pad_idx"]
+        )
+        decoder = Decoder(
+            vocab_size  = cfg["vocab_size"],
+            embed_dim   = cfg["embed_dim"],
+            hidden_dim  = cfg["hidden_dim"],
+            encoder_dim = cfg["hidden_dim"] * 2,  # Bi-LSTM nên x2
+            n_layers    = cfg["n_layers"],
+            dropout     = cfg["dropout"],
+            pad_idx     = cfg["pad_idx"]
+        )
+        model = Seq2Seq(encoder, decoder, device)
+        print(f"✅ Khởi tạo thành công mạng LSTM ({cfg['n_layers']} layers).")
         
     # Nạp mô hình lên Card Đồ Họa
     model = model.to(device)
