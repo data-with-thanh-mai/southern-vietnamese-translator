@@ -5,7 +5,7 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from src.data.data_loader import get_dataloaders, WordLevelTokenizer
+from src.data.data_loader import create_dataloader, WordLevelTokenizer
 from src.models.seq2seq_lstm import Seq2Seq
 from src.utils import set_seed, EarlyStopping, save_checkpoint, load_checkpoint
 import config
