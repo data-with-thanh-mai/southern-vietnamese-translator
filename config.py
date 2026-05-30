@@ -14,7 +14,7 @@ LOG_DIR    = "outputs/logs/"
 FIG_DIR    = "outputs/figures/"
 
 # Đường dẫn sẽ tự động nối thành "data/processed/train.csv"
-TRAIN_PATH = DATA_DIR + "train(2).csv"  
+TRAIN_PATH = DATA_DIR + "train (2).csv"  
 VAL_PATH   = DATA_DIR + "val.csv"    
 TEST_PATH  = DATA_DIR + "test.csv"   
 VOCAB_PATH = DATA_DIR + "vocab_word_level.json" 
