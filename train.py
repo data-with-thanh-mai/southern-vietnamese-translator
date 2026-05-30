@@ -242,3 +242,92 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
     writer.close()
     print("QUÁ TRÌNH HUẤN LUYỆN ĐĐ KẾT THÚC!")
     return model
+
+# ==============================================================================
+# KHỐI KHỞI CHẠY THỰC TẾ (EntryPoint)
+# Thêm vào dưới cùng file train.py
+# ==============================================================================
+if __name__ == "__main__":
+    import pandas as pd
+    
+    # Cố định seed để kết quả ổn định
+    set_seed(config.SEED)
+    
+    # Chọn thiết bị (Bật GPU trên Kaggle)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"💻 Đang sử dụng thiết bị: {device.upper()}")
+
+    # 1. IMPORT DATASET TỪ FILE ĐÃ CHIA (Của Minh)
+    print("⏳ Đang import dữ liệu từ ổ đĩa...")
+    try:
+        train_df = pd.read_csv(config.TRAIN_PATH)
+        val_df = pd.read_csv(config.VAL_PATH)
+        print(f"✅ Đã nạp thành công: {len(train_df)} câu Train | {len(val_df)} câu Val")
+    except FileNotFoundError as e:
+        print(f"❌ LỖI: Không tìm thấy dữ liệu! Vui lòng kiểm tra lại đường dẫn trong config.py\nChi tiết: {e}")
+        exit()
+    
+    # 2. KHỞI TẠO TOKENIZER & MODEL TƯƠNG ỨNG VỚI CẤU HÌNH
+    print(f"🤖 Đang chuẩn bị mô hình: {config.MODEL_TYPE.upper()}...")
+    
+    if config.MODEL_TYPE in ["transformer_full", "transformer_lora"]:
+        from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+        
+        # Tải bộ Tokenizer của viT5
+        tokenizer = AutoTokenizer.from_pretrained(config.active_cfg["model_name"])
+        # Tải mạng neural của viT5
+        model = AutoModelForSeq2SeqLM.from_pretrained(config.active_cfg["model_name"])
+        
+        # Nếu chọn LoRA (Của Ngọc)
+        if config.MODEL_TYPE == "transformer_lora":
+            from peft import get_peft_model, LoraConfig, TaskType
+            print("🗜️ Đang bọc lớp LoRA siêu nhẹ vào mô hình...")
+            peft_config = LoraConfig(
+                task_type=TaskType.SEQ_2_SEQ_LM,
+                r=config.active_cfg["lora_r"],
+                lora_alpha=config.active_cfg["lora_alpha"],
+                lora_dropout=config.active_cfg["lora_dropout"],
+                target_modules=config.active_cfg["target_modules"]
+            )
+            model = get_peft_model(model, peft_config)
+            # In ra màn hình xem nén được bao nhiêu tham số
+            model.print_trainable_parameters() 
+            
+    elif config.MODEL_TYPE == "lstm":
+        # Khởi tạo LSTM của Minh
+        tokenizer = WordLevelTokenizer.load_from_json(config.VOCAB_PATH)
+        model = Seq2Seq(config.active_cfg) 
+        print(f"✅ Khởi tạo thành công mạng LSTM ({config.active_cfg['n_layers']} layers).")
+        
+    # Nạp mô hình lên Card Đồ Họa
+    model = model.to(device)
+
+    # 3. CHUYỂN DATA THÀNH DATALOADER CHO Pytorch
+    print("📦 Đang đóng gói dữ liệu vào DataLoader...")
+    train_loader = create_dataloader(
+        dataframe=train_df,
+        tokenizer=tokenizer,
+        batch_size=config.BATCH_SIZE,
+        max_source_len=config.MAX_SRC_LEN,
+        max_target_len=config.MAX_TGT_LEN,
+        is_train=True 
+    )
+    
+    val_loader = create_dataloader(
+        dataframe=val_df,
+        tokenizer=tokenizer,
+        batch_size=config.BATCH_SIZE,
+        max_source_len=config.MAX_SRC_LEN,
+        max_target_len=config.MAX_TGT_LEN,
+        is_train=False 
+    )
+
+    # 4. KÍCH HOẠT VÒNG LẶP HUẤN LUYỆN
+    trained_model = train_model(
+        model=model,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        tokenizer=tokenizer,
+        config=config,
+        device=device
+    )
