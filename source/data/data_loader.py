@@ -48,10 +48,6 @@ class DialectDataset(Dataset):
                 'attention_mask': source_encoding['attention_mask'].squeeze(),
                 'labels': target_encoding['input_ids'].squeeze()
             }
-
-        # ==========================================
-        # NHÁNH 2: XỬ LÝ CHO LSTM (Của Minh)
-        # ==========================================
         # ==========================================
         # NHÁNH 2: XỬ LÝ CHO LSTM 
         # ==========================================
@@ -79,12 +75,6 @@ class DialectDataset(Dataset):
                 'labels': torch.tensor(trg_ids, dtype=torch.long)
             }
 
-            return {
-                'input_ids': torch.tensor(src_ids, dtype=torch.long),
-                # Mask thủ công: 1 cho token thật, 0 cho token PAD
-                'attention_mask': torch.tensor([1 if token != pad_idx else 0 for token in src_ids], dtype=torch.long),
-                'labels': torch.tensor(trg_ids, dtype=torch.long)
-            }
 
 def create_dataloader(dataframe, tokenizer, batch_size, max_source_len=256, max_target_len=256, is_train=True, model_type="transformer_full"):
     """
