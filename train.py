@@ -271,10 +271,10 @@ if __name__ == "__main__":
     print(f"🤖 Đang chuẩn bị mô hình: {config.MODEL_TYPE.upper()}...")
     
     if config.MODEL_TYPE in ["transformer_full", "transformer_lora"]:
-        from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+        from transformers import T5Tokenizer, AutoModelForSeq2SeqLM
         
         # Tải bộ Tokenizer của viT5
-        tokenizer = AutoTokenizer.from_pretrained(config.active_cfg["model_name"], use_fast=False)
+        tokenizer = T5Tokenizer.from_pretrained(config.active_cfg["model_name"])
         # Tải mạng neural của viT5
         model = AutoModelForSeq2SeqLM.from_pretrained(config.active_cfg["model_name"])
         
