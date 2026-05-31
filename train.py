@@ -137,7 +137,7 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
         print(f"Kết quả Epoch {epoch+1}: Train Loss = {avg_train_loss:.4f} | Val Loss = {avg_val_loss:.4f}")
 
         if avg_val_loss < best_val_loss:
-            print(f"🔥 KỶ LỤC MỚI! Val Loss giảm từ {best_val_loss:.4f} xuống {avg_val_loss:.4f}.")
+            print(f"🔥 Val loss cải thiện từ {best_val_loss:.4f} xuống {avg_val_loss:.4f}.")
             best_val_loss = avg_val_loss
             epochs_no_improve = 0 
             
