@@ -9,8 +9,8 @@ CKPT_DIR   = "outputs/checkpoints/"
 LOG_DIR    = "outputs/logs/"
 FIG_DIR    = "outputs/figures/"
 
-TRAIN_PATH = DATA_DIR + "train (2).csv"  # Đã sửa lại cho chuẩn
-VAL_PATH   = DATA_DIR + "test.csv"    
+TRAIN_PATH = DATA_DIR + "train.csv"  # Đã sửa lại cho chuẩn
+VAL_PATH   = DATA_DIR + "val.csv"    
 TEST_PATH  = DATA_DIR + "test.csv"   
 VOCAB_PATH = DATA_DIR + "vocab_word_level.json" 
 
