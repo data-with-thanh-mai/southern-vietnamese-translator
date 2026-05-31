@@ -43,8 +43,9 @@ def build_optimizer_and_scheduler(model: nn.Module, cfg: dict, total_steps: int)
 
 def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda"):
     print("\n🚀 BẮT ĐẦU QUÁ TRÌNH HUẤN LUYỆN.")
-    
-    # SETUP THƯ MỤC GHI LOG CHO TỪNG MODEL
+
+    #---------------------------------SỬA------------------------------------
+    # SỬA SETUP THƯ MỤC GHI LOG CHO TỪNG MODEL
     model_log_dir = os.path.join(config.LOG_DIR, config.MODEL_TYPE)
     os.makedirs(model_log_dir, exist_ok=True)
     writer = SummaryWriter(log_dir=config.LOG_DIR)
@@ -54,6 +55,7 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
     with open(log_file_path, "w", encoding="utf-8") as f:
         f.write(f"=== NHẬT KÝ HUẤN LUYỆN: {config.MODEL_TYPE.upper()} ===\n")
         f.write("-" * 50 + "\n")
+    #---------------------------------SỬA------------------------------------
     
     best_val_loss = float('inf')
     epochs_no_improve = 0 
@@ -144,7 +146,7 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
         # ==========================================
         print(f"Kết quả Epoch {epoch+1}: Train Loss = {avg_train_loss:.4f} | Val Loss = {avg_val_loss:.4f}")
 
-        # 🟢 GHI CHỈ SỐ CƠ BẢN VÀO FILE TXT 🟢
+        #---------------------------------SỬA------------------------------------
         with open(log_file_path, "a", encoding="utf-8") as f:
             f.write(f"Epoch {epoch+1:02d} | Train Loss = {avg_train_loss:.4f} | Val Loss = {avg_val_loss:.4f}\n")
 
@@ -152,7 +154,7 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
             msg_improve = f"Val loss cải thiện từ {best_val_loss:.4f} xuống {avg_val_loss:.4f}."
             print(msg_improve)
             
-            # 🟢 GHI CHÚ CẢI THIỆN MỚI VÀO FILE TXT 🟢
+            #  GHI CHÚ CẢI THIỆN MỚI VÀO FILE TXT 
             with open(log_file_path, "a", encoding="utf-8") as f:
                 f.write(f"  -> {msg_improve} (Đã lưu checkpoint)\n")
                 
@@ -177,7 +179,7 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
             msg_warn = f"⚠️ Val Loss không giảm ({epochs_no_improve}/{config.PATIENCE})."
             print(msg_warn)
             
-            # 🟢 GHI CHÚ "OVERFITTING" VÀO FILE TXT 🟢
+            # GHI CHÚ "OVERFITTING" VÀO FILE TXT 
             with open(log_file_path, "a", encoding="utf-8") as f:
                 f.write(f"  -> {msg_warn}\n")
             
@@ -185,19 +187,19 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
                 msg_stop = f"🛑 KÍCH HOẠT EARLY STOPPING ở Epoch {epoch+1}."
                 print(msg_stop)
                 
-                # 🟢 GHI CHÚ DỪNG SỚM VÀO FILE TXT 🟢
+                #  GHI CHÚ DỪNG SỚM VÀO FILE TXT 
                 with open(log_file_path, "a", encoding="utf-8") as f:
                     f.write(f"  -> {msg_stop}\n")
                 break 
             
     writer.close()
     
-    # 🟢 CHỐT SỔ NHẬT KÝ 🟢
     with open(log_file_path, "a", encoding="utf-8") as f:
         f.write("-" * 50 + "\n")
         f.write("🎉 QUÁ TRÌNH HUẤN LUYỆN ĐÃ KẾT THÚC!\n")
         
     print("🎉 QUÁ TRÌNH HUẤN LUYỆN ĐÃ KẾT THÚC!")
+    #---------------------------------SỬA------------------------------------
     return model
 
 
