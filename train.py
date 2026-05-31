@@ -82,7 +82,7 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
             elif config.MODEL_TYPE == "lstm":
                 # Kích hoạt teacher forcing và truyền pad_idx
                 outputs = model(src=input_ids, trg=labels, pad_idx=config.PAD_IDX, tf_ratio=config.TF_RATIO)
-                loss = criterion(outputs.view(-1, outputs.size(-1)), labels.view(-1))
+                loss = criterion(outputs.view(-1, outputs.size(-1)), labels[:,1:].view(-1))
             
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0) 
