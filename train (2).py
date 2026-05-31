@@ -44,8 +44,18 @@ def build_optimizer_and_scheduler(model: nn.Module, cfg: dict, total_steps: int)
 def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda"):
     print("\n🚀 BẮT ĐẦU QUÁ TRÌNH HUẤN LUYỆN.")
     
-    os.makedirs(config.LOG_DIR, exist_ok=True)
+   #---------------------------------SỬA------------------------------------
+    # SỬA SETUP THƯ MỤC GHI LOG CHO TỪNG MODEL
+    model_log_dir = os.path.join(config.LOG_DIR, config.MODEL_TYPE)
+    os.makedirs(model_log_dir, exist_ok=True)
     writer = SummaryWriter(log_dir=config.LOG_DIR)
+
+    # TẠO FILE TXT VÀ GHI TIÊU ĐỀ 
+    log_file_path = os.path.join(model_log_dir, "training_log.txt")
+    with open(log_file_path, "w", encoding="utf-8") as f:
+        f.write(f"=== NHẬT KÝ HUẤN LUYỆN: {config.MODEL_TYPE.upper()} ===\n")
+        f.write("-" * 50 + "\n")
+    #---------------------------------SỬA------------------------------------
     
     best_val_loss = float('inf')
     epochs_no_improve = 0 
@@ -82,7 +92,7 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
             elif config.MODEL_TYPE == "lstm":
                 # Kích hoạt teacher forcing và truyền pad_idx
                 outputs = model(src=input_ids, trg=labels, pad_idx=config.PAD_IDX, tf_ratio=config.TF_RATIO)
-                loss = criterion(outputs.contiguous().view(-1, outputs.size(-1)), labels[:, 1:].contiguous().view(-1))
+                loss = criterion(outputs.view(-1, outputs.size(-1)), labels[:,1:].view(-1))
             
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0) 
@@ -123,7 +133,7 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
                 elif config.MODEL_TYPE == "lstm":
                     # TẮT teacher forcing (tf_ratio = 0.0) khi validate
                     outputs = model(src=input_ids, trg=labels, pad_idx=config.PAD_IDX, tf_ratio=0.0)
-                    loss = criterion(outputs.contiguous().view(-1, outputs.size(-1)), labels[:, 1:].contiguous().view(-1))
+                    loss = criterion(outputs.view(-1, outputs.size(-1)), labels.view(-1))
                 
                 total_val_loss += loss.item()
                 val_bar.set_postfix({'loss': f"{loss.item():.4f}"})
@@ -136,31 +146,60 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
         # ==========================================
         print(f"Kết quả Epoch {epoch+1}: Train Loss = {avg_train_loss:.4f} | Val Loss = {avg_val_loss:.4f}")
 
+        #---------------------------------SỬA------------------------------------
+        with open(log_file_path, "a", encoding="utf-8") as f:
+            f.write(f"Epoch {epoch+1:02d} | Train Loss = {avg_train_loss:.4f} | Val Loss = {avg_val_loss:.4f}\n")
+
         if avg_val_loss < best_val_loss:
-            print(f"🔥 KỶ LỤC MỚI! Val Loss giảm từ {best_val_loss:.4f} xuống {avg_val_loss:.4f}.")
+            msg_improve = f"Val loss cải thiện từ {best_val_loss:.4f} xuống {avg_val_loss:.4f}."
+            print(msg_improve)
+            
+            #  GHI CHÚ CẢI THIỆN MỚI VÀO FILE TXT 
+            with open(log_file_path, "a", encoding="utf-8") as f:
+                f.write(f"  -> {msg_improve} (Đã lưu checkpoint)\n")
+                
             best_val_loss = avg_val_loss
             epochs_no_improve = 0 
             
-            checkpoint_dir = os.path.join("outputs", "checkpoints", "best_model")
+            folder_name = f"best_model_{config.MODEL_TYPE}"
+            checkpoint_dir = os.path.join("outputs", "checkpoints", folder_name)
             os.makedirs(checkpoint_dir, exist_ok=True) 
             
             if config.MODEL_TYPE in ["transformer_full", "transformer_lora"]:
                 model.save_pretrained(checkpoint_dir)
                 tokenizer.save_pretrained(checkpoint_dir) 
+                torch.save(model.state_dict(), os.path.join(checkpoint_dir, f"{config.MODEL_TYPE}_best.pth"))
             elif config.MODEL_TYPE == "lstm":
-                torch.save(model.state_dict(), os.path.join(checkpoint_dir, "lstm_best.pth"))
+                torch.save(model.state_dict(), os.path.join(checkpoint_dir, f"{config.MODEL_TYPE}_best.pth"))
                 
-            print(f"💾 Đã lưu thành công mô hình tốt nhất vào: {checkpoint_dir}")
+            print(f"💾 Đã lưu mô hình tốt nhất vào: {checkpoint_dir}")
+            
         else:
             epochs_no_improve += 1
-            print(f"⚠️ Val Loss không giảm. Cảnh báo Overfitting lần {epochs_no_improve}/{config.PATIENCE}.")
+            msg_warn = f"⚠️ Val Loss không giảm ({epochs_no_improve}/{config.PATIENCE})."
+            print(msg_warn)
+            
+            # GHI CHÚ "OVERFITTING" VÀO FILE TXT 
+            with open(log_file_path, "a", encoding="utf-8") as f:
+                f.write(f"  -> {msg_warn}\n")
             
             if epochs_no_improve >= config.PATIENCE:
-                print(f"🛑 ĐÃ KÍCH HOẠT EARLY STOPPING! Dừng huấn luyện sớm ở Epoch {epoch+1}.")
+                msg_stop = f"🛑 KÍCH HOẠT EARLY STOPPING ở Epoch {epoch+1}."
+                print(msg_stop)
+                
+                #  GHI CHÚ DỪNG SỚM VÀO FILE TXT 
+                with open(log_file_path, "a", encoding="utf-8") as f:
+                    f.write(f"  -> {msg_stop}\n")
                 break 
             
     writer.close()
+    
+    with open(log_file_path, "a", encoding="utf-8") as f:
+        f.write("-" * 50 + "\n")
+        f.write("🎉 QUÁ TRÌNH HUẤN LUYỆN ĐÃ KẾT THÚC!\n")
+        
     print("🎉 QUÁ TRÌNH HUẤN LUYỆN ĐÃ KẾT THÚC!")
+    #---------------------------------SỬA------------------------------------
     return model
 
 
