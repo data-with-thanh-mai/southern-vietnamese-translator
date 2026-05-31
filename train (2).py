@@ -44,8 +44,7 @@ def build_optimizer_and_scheduler(model: nn.Module, cfg: dict, total_steps: int)
 def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda"):
     print("\n🚀 BẮT ĐẦU QUÁ TRÌNH HUẤN LUYỆN.")
     
-   #---------------------------------SỬA------------------------------------
-    # SỬA SETUP THƯ MỤC GHI LOG CHO TỪNG MODEL
+    # SETUP THƯ MỤC GHI LOG CHO TỪNG MODEL
     model_log_dir = os.path.join(config.LOG_DIR, config.MODEL_TYPE)
     os.makedirs(model_log_dir, exist_ok=True)
     writer = SummaryWriter(log_dir=config.LOG_DIR)
@@ -55,7 +54,6 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
     with open(log_file_path, "w", encoding="utf-8") as f:
         f.write(f"=== NHẬT KÝ HUẤN LUYỆN: {config.MODEL_TYPE.upper()} ===\n")
         f.write("-" * 50 + "\n")
-    #---------------------------------SỬA------------------------------------
     
     best_val_loss = float('inf')
     epochs_no_improve = 0 
@@ -85,14 +83,12 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
             optimizer.zero_grad()
             
             if config.MODEL_TYPE in ["transformer_full", "transformer_lora"]:
-                # Chuẩn bị label cho HuggingFace: bỏ qua PAD token
                 labels[labels == tokenizer.pad_token_id] = -100
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
                 loss = outputs.loss
             elif config.MODEL_TYPE == "lstm":
-                # Kích hoạt teacher forcing và truyền pad_idx
                 outputs = model(src=input_ids, trg=labels, pad_idx=config.PAD_IDX, tf_ratio=config.TF_RATIO)
-                loss = criterion(outputs.view(-1, outputs.size(-1)), labels[:,1:].view(-1))
+                loss = criterion(outputs.contiguous().view(-1, outputs.size(-1)), labels[:, 1:].contiguous().view(-1))
             
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0) 
@@ -131,9 +127,8 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
                     outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
                     loss = outputs.loss
                 elif config.MODEL_TYPE == "lstm":
-                    # TẮT teacher forcing (tf_ratio = 0.0) khi validate
                     outputs = model(src=input_ids, trg=labels, pad_idx=config.PAD_IDX, tf_ratio=0.0)
-                    loss = criterion(outputs.view(-1, outputs.size(-1)), labels.view(-1))
+                    loss = criterion(outputs.contiguous().view(-1, outputs.size(-1)), labels[:, 1:].contiguous().view(-1))
                 
                 total_val_loss += loss.item()
                 val_bar.set_postfix({'loss': f"{loss.item():.4f}"})
@@ -146,7 +141,6 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
         # ==========================================
         print(f"Kết quả Epoch {epoch+1}: Train Loss = {avg_train_loss:.4f} | Val Loss = {avg_val_loss:.4f}")
 
-        #---------------------------------SỬA------------------------------------
         with open(log_file_path, "a", encoding="utf-8") as f:
             f.write(f"Epoch {epoch+1:02d} | Train Loss = {avg_train_loss:.4f} | Val Loss = {avg_val_loss:.4f}\n")
 
@@ -154,7 +148,6 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
             msg_improve = f"Val loss cải thiện từ {best_val_loss:.4f} xuống {avg_val_loss:.4f}."
             print(msg_improve)
             
-            #  GHI CHÚ CẢI THIỆN MỚI VÀO FILE TXT 
             with open(log_file_path, "a", encoding="utf-8") as f:
                 f.write(f"  -> {msg_improve} (Đã lưu checkpoint)\n")
                 
@@ -179,7 +172,6 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
             msg_warn = f"⚠️ Val Loss không giảm ({epochs_no_improve}/{config.PATIENCE})."
             print(msg_warn)
             
-            # GHI CHÚ "OVERFITTING" VÀO FILE TXT 
             with open(log_file_path, "a", encoding="utf-8") as f:
                 f.write(f"  -> {msg_warn}\n")
             
@@ -187,7 +179,6 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
                 msg_stop = f"🛑 KÍCH HOẠT EARLY STOPPING ở Epoch {epoch+1}."
                 print(msg_stop)
                 
-                #  GHI CHÚ DỪNG SỚM VÀO FILE TXT 
                 with open(log_file_path, "a", encoding="utf-8") as f:
                     f.write(f"  -> {msg_stop}\n")
                 break 
@@ -199,7 +190,6 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
         f.write("🎉 QUÁ TRÌNH HUẤN LUYỆN ĐÃ KẾT THÚC!\n")
         
     print("🎉 QUÁ TRÌNH HUẤN LUYỆN ĐÃ KẾT THÚC!")
-    #---------------------------------SỬA------------------------------------
     return model
 
 
@@ -211,7 +201,6 @@ if __name__ == "__main__":
     import random
     import numpy as np
     
-    # 0. CỐ ĐỊNH SEED 
     random.seed(config.SEED)
     np.random.seed(config.SEED)
     torch.manual_seed(config.SEED)
@@ -221,7 +210,6 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"💻 Đang sử dụng thiết bị: {device.upper()}")
 
-    # 1. IMPORT DATASET 
     print("⏳ Đang import dữ liệu từ ổ đĩa...")
     try:
         train_df = pd.read_csv(config.TRAIN_PATH)
@@ -231,25 +219,21 @@ if __name__ == "__main__":
         print(f"❌ LỖI: Không tìm thấy dữ liệu! Vui lòng kiểm tra lại đường dẫn trong config.py\nChi tiết: {e}")
         exit()
     
-    # 2. KHỞI TẠO TOKENIZER & MODEL (SỬ DỤNG CÁC HÀM BUILD ĐÃ VIẾT)
     print(f"🤖 Đang chuẩn bị mô hình: {config.MODEL_TYPE.upper()}...")
     
     if config.MODEL_TYPE == "transformer_lora":
-        # Gọi hàm build từ file của Ngọc
         from source.models.transformer_lora import build_lora_model
         model, tokenizer = build_lora_model(config.active_cfg, device=device)
             
     elif config.MODEL_TYPE == "transformer_full":
-        # Gọi hàm build từ file của Mai
         from source.models.transformer_full import build_transformer_full_ft
         model, tokenizer = build_transformer_full_ft(
             model_name=config.active_cfg["model_name"], 
             device=device, 
-            use_fast=False # Khóa an toàn chống lỗi Tokenizer
+            use_fast=False
         )
             
     elif config.MODEL_TYPE == "lstm":
-        # Lắp ráp mô hình của Minh
         from source.data.tokenize_vocab import SyllableSubwordTokenizer
         from source.models.seq2seq_lstm import Encoder, Decoder, Seq2Seq
         tokenizer = SyllableSubwordTokenizer()
@@ -271,7 +255,6 @@ if __name__ == "__main__":
         model = model.to(device)
         print(f"✅ Khởi tạo thành công mạng LSTM ({cfg['n_layers']} layers).")
 
-    # 3. ĐÓNG GÓI DATALOADER
     print("📦 Đang đóng gói dữ liệu vào DataLoader...")
     train_loader = create_dataloader(
         dataframe=train_df,
@@ -293,7 +276,6 @@ if __name__ == "__main__":
         model_type=config.MODEL_TYPE 
     )
 
-    # 4. KÍCH HOẠT HUẤN LUYỆN
     trained_model = train_model(
         model=model,
         train_loader=train_loader,
