@@ -1,4 +1,3 @@
-
 import os
 import json
 import torch
@@ -43,10 +42,7 @@ def predict_lstm(model, tokenizer, texts: list[str], device: str) -> list[str]:
                 max_len=config.MAX_DECODE,
             )
 
-        pred_text_tokens_raw = [tokenizer.id_to_vocab[idx] for idx in pred_ids]
-        pred_text_tokens = [token for token in pred_text_tokens_raw if token not in ['<sos>', '<eos>', '<pad>']]
-        pred_text = ' '.join(pred_text_tokens)
-        pred_text = ' '.join(pred_text_tokens)
+        pred_text = tokenizer.decode(pred_ids)  # ✅ dùng decode từ tokenize_vocab.py
         predictions.append(pred_text)
 
     return predictions
@@ -98,8 +94,8 @@ def predict_rule_based(train_df: pd.DataFrame, texts: list[str]) -> list[str]:
 
 def compute_bleu(references: list[str], hypotheses: list[str]) -> float:
     """corpus BLEU-4 với smoothing."""
-    refs_tokenized = [[ref.split()] for ref in references]
-    hyps_tokenized = [hyp.split() for hyp in hypotheses]
+    refs_tokenized = [[str(ref).split()] for ref in references]
+    hyps_tokenized = [str(hyp).split() for hyp in hypotheses]
     smoother = SmoothingFunction().method1
     return corpus_bleu(refs_tokenized, hyps_tokenized, smoothing_function=smoother) * 100
 
@@ -107,7 +103,7 @@ def compute_bleu(references: list[str], hypotheses: list[str]) -> float:
 def compute_rouge_l(references: list[str], hypotheses: list[str]) -> float:
     scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
     scores = [
-        scorer.score(ref, hyp)["rougeL"].fmeasure
+        scorer.score(str(ref), str(hyp))["rougeL"].fmeasure
         for ref, hyp in zip(references, hypotheses)
     ]
     return np.mean(scores) * 100
@@ -115,7 +111,7 @@ def compute_rouge_l(references: list[str], hypotheses: list[str]) -> float:
 
 def compute_meteor(references: list[str], hypotheses: list[str]) -> float:
     scores = [
-        meteor_score([ref.split()], hyp.split())
+        meteor_score([str(ref).split()], str(hyp).split())
         for ref, hyp in zip(references, hypotheses)
     ]
     return np.mean(scores) * 100
@@ -219,26 +215,21 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"\nThiết bị: {device.upper()}")
 
-    # Load test set
     print("Đang load tập test...")
     test_df  = pd.read_csv(config.TEST_PATH)
-    train_df = pd.read_csv(config.TRAIN_PATH)   # dùng cho rule-based
+    train_df = pd.read_csv(config.TRAIN_PATH)
 
-    # Cột input/target — dùng source_sentence & target_sentence cho gọn
     sources    = test_df["input_text"].astype(str).tolist()
     references = test_df["target_text"].astype(str).tolist()
     print(f" {len(test_df)} câu test")
 
-    # Load Sentence Transformer để tính Cosine Similarity
     print("\n🔍 Đang load mô hình Semantic Similarity...")
     sem_model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 
-    all_results   = []   # bảng metrics
-    all_preds     = {}   # lưu dự đoán để in ví dụ
+    all_results = []
+    all_preds   = {}
 
-    # ──────────────────────────────────────────────────────────────
-    # MODEL 1: LSTM
-    # ──────────────────────────────────────────────────────────────
+    # ── MODEL 1: LSTM ─────────────────────────────────────────────
     print("\n" + "="*60)
     print(" MODEL 1: LSTM")
     print("="*60)
@@ -250,9 +241,7 @@ def main():
     except FileNotFoundError as e:
         print(f" Bỏ qua LSTM: {e}")
 
-    # ──────────────────────────────────────────────────────────────
-    # MODEL 2: Transformer Full Fine-tuning
-    # ──────────────────────────────────────────────────────────────
+    # ── MODEL 2: Transformer Full ──────────────────────────────────
     print("\n" + "="*60)
     print("MODEL 2: Transformer Full Fine-tuning")
     print("="*60)
@@ -261,13 +250,11 @@ def main():
         preds_full = predict_transformer(full_model, full_tok, sources, device)
         all_preds["Transformer Full"] = preds_full
         all_results.append(evaluate_predictions(references, preds_full, sem_model, "Transformer Full"))
-        del full_model   # giải phóng VRAM
+        del full_model
     except FileNotFoundError as e:
         print(f"  ⚠️  Bỏ qua Transformer Full: {e}")
 
-    # ──────────────────────────────────────────────────────────────
-    # MODEL 3: Transformer LoRA
-    # ──────────────────────────────────────────────────────────────
+    # ── MODEL 3: Transformer LoRA ──────────────────────────────────
     print("\n" + "="*60)
     print("MODEL 3: Transformer LoRA")
     print("="*60)
@@ -280,9 +267,7 @@ def main():
     except FileNotFoundError as e:
         print(f"Bỏ qua Transformer LoRA: {e}")
 
-    # ──────────────────────────────────────────────────────────────
-    # MODEL 4: Rule-based Baseline
-    # ──────────────────────────────────────────────────────────────
+    # ── BASELINE: Rule-based ───────────────────────────────────────
     print("\n" + "="*60)
     print("BASELINE: Rule-based")
     print("="*60)
@@ -290,24 +275,19 @@ def main():
     all_preds["Rule-based"] = preds_rule
     all_results.append(evaluate_predictions(references, preds_rule, sem_model, "Rule-based"))
 
-    # ──────────────────────────────────────────────────────────────
-    # IN BẢNG KẾT QUẢ
-    # ──────────────────────────────────────────────────────────────
+    # ── BẢNG KẾT QUẢ ──────────────────────────────────────────────
     print("\n" + "="*60)
     print("BẢNG KẾT QUẢ TỔNG HỢP")
     print("="*60)
     results_df = pd.DataFrame(all_results).set_index("Model")
     print(results_df.to_string())
 
-    # Lưu file
     os.makedirs("outputs", exist_ok=True)
     csv_path = "outputs/evaluation_results.csv"
     results_df.to_csv(csv_path)
     print(f"\nĐã lưu bảng kết quả vào: {csv_path}")
 
-    # ──────────────────────────────────────────────────────────────
-    # IN VÍ DỤ DỊCH THỬ (5 câu đầu)
-    # ──────────────────────────────────────────────────────────────
+    # ── VÍ DỤ DỊCH THỬ ────────────────────────────────────────────
     print("\n" + "="*60)
     print("VÍ DỤ DỊCH THỬ (5 câu đầu)")
     print("="*60)
@@ -318,7 +298,6 @@ def main():
         for model_name, preds in all_preds.items():
             print(f"{model_name:20s}: {preds[i]}")
 
-    # Lưu ví dụ dịch thử ra file json
     examples = []
     for i in range(len(sources)):
         row = {"input": sources[i], "reference": references[i]}
