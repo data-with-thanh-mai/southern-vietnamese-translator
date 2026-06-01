@@ -43,7 +43,10 @@ def predict_lstm(model, tokenizer, texts: list[str], device: str) -> list[str]:
                 max_len=config.MAX_DECODE,
             )
 
-        pred_text = tokenizer.decode(pred_ids)
+        pred_text_tokens_raw = [tokenizer.id_to_vocab[idx] for idx in pred_ids]
+        pred_text_tokens = [token for token in pred_text_tokens_raw if token not in ['<sos>', '<eos>', '<pad>']]
+        pred_text = ' '.join(pred_text_tokens)
+        pred_text = ' '.join(pred_text_tokens)
         predictions.append(pred_text)
 
     return predictions
