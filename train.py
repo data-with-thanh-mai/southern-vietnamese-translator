@@ -41,6 +41,14 @@ def build_optimizer_and_scheduler(model: nn.Module, cfg: dict, total_steps: int)
     scheduler = LambdaLR(optimizer, lr_lambda)
     return optimizer, scheduler
 
+
+# ✅ THÊM MỚI: hàm tính Scheduled Teacher Forcing
+def get_tf_ratio(epoch: int, num_epochs: int, tf_start: float, tf_end: float) -> float:
+    """Giảm tuyến tính tf_ratio từ tf_start → tf_end theo epoch."""
+    progress = epoch / max(1, num_epochs - 1)
+    return tf_start - progress * (tf_start - tf_end)
+
+
 def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda"):
     print("\n🚀 BẮT ĐẦU QUÁ TRÌNH HUẤN LUYỆN.")
     
@@ -65,6 +73,12 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
         criterion = nn.CrossEntropyLoss(ignore_index=config.PAD_IDX)
 
     for epoch in range(config.NUM_EPOCHS):
+
+        # ✅ THÊM MỚI: tính tf_ratio theo schedule thay vì dùng config.TF_RATIO cố định
+        if config.MODEL_TYPE == "lstm":
+            tf_ratio = get_tf_ratio(epoch, config.NUM_EPOCHS, config.TF_START, config.TF_END)
+            print(f"  📉 Teacher Forcing ratio epoch {epoch+1}: {tf_ratio:.3f}")
+
         # ==========================================
         # 1. PHA HUẤN LUYỆN (TRAINING)
         # ==========================================
@@ -87,7 +101,8 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
                 loss = outputs.loss
             elif config.MODEL_TYPE == "lstm":
-                outputs = model(src=input_ids, trg=labels, pad_idx=config.PAD_IDX, tf_ratio=config.TF_RATIO)
+                # ✅ SỬA: dùng tf_ratio từ schedule thay vì config.TF_RATIO cố định
+                outputs = model(src=input_ids, trg=labels, pad_idx=config.PAD_IDX, tf_ratio=tf_ratio)
                 loss = criterion(outputs.contiguous().view(-1, outputs.size(-1)), labels[:, 1:].contiguous().view(-1))
             
             loss.backward()
