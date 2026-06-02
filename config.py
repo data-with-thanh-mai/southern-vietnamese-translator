@@ -56,7 +56,7 @@ LSTM_CFG = {
     
     "tf_start"    : 0.9,    
     "tf_end"      : 0.5,    
-    "tf_decay"    : "linear"
+    "tf_decay"    : "linear",
     
     "patience"    : 5,
     "min_delta"   : 1e-4,
