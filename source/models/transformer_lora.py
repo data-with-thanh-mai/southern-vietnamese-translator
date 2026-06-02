@@ -11,7 +11,7 @@ def build_lora_model(cfg, device="cuda", checkpoint_path=None):
     print(f" Đang khởi tạo viT5 (Base Model: {cfg['model_name']})...")
     
     # 1. Tải tokenizer và base model 
-    tokenizer = AutoTokenizer.from_pretrained(cfg["model_name"], use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained(cfg["model_name"], use_fast=False)
     base_model = AutoModelForSeq2SeqLM.from_pretrained(cfg["model_name"])
     
     # 2. KIỂM TRA CHẾ ĐỘ (TRAIN HAY TEST)
