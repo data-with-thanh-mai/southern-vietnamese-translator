@@ -17,6 +17,15 @@ VOCAB_PATH = DATA_DIR + "vocab_word_level.json"
 for d in [CKPT_DIR, LOG_DIR, FIG_DIR]:
     os.makedirs(d, exist_ok=True)
 
+def _get_vocab_size(path: str) -> int:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return len(json.load(f))
+    except FileNotFoundError:
+        return 7218  # fallback nếu chưa có file
+ 
+ACTUAL_VOCAB_SIZE = _get_vocab_size(VOCAB_PATH)
+
 # -----------------------DATA----------------------------------
 MAX_SRC_LEN =  163  
 MAX_TGT_LEN =  145  
@@ -33,7 +42,7 @@ MAX_DECODE = 50
 # MODEL 1: SEQ2SEQ LSTM (Baseline)
 # ==============================================================
 LSTM_CFG = {
-    "vocab_size"  : 8000,   
+    "vocab_size"  : ACTUAL_VOCAB_SIZE,   
     "embed_dim"   : 256,    
     "hidden_dim"  : 512,    
     "n_layers"    : 2,      
@@ -47,6 +56,7 @@ LSTM_CFG = {
     
     "tf_start"    : 0.9,    
     "tf_end"      : 0.5,    
+    "tf_decay"    : "linear"
     
     "patience"    : 5,
     "min_delta"   : 1e-4,
@@ -127,4 +137,5 @@ BATCH_SIZE    = active_cfg["batch_size"]
 WEIGHT_DECAY  = active_cfg.get("weight_decay", 1e-4)
 WARMUP_RATIO  = active_cfg.get("warmup_ratio", 0.1)
 PATIENCE      = active_cfg.get("patience", 3)
-TF_RATIO      = active_cfg.get("tf_end", 0.5)
+TF_START = active_cfg.get("tf_start", 0.9)
+TF_END   = active_cfg.get("tf_end",   0.3)
