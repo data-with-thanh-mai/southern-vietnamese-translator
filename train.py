@@ -70,7 +70,7 @@ def train_model(model, train_loader, val_loader, tokenizer, config, device="cuda
     optimizer, scheduler = build_optimizer_and_scheduler(model, config, total_steps)
 
     if config.MODEL_TYPE == "lstm":
-        criterion = nn.CrossEntropyLoss(ignore_index=config.PAD_IDX)
+        criterion = nn.CrossEntropyLoss(ignore_index=config.PAD_IDX, label_smoothing=0.1)  # ✅ Label Smoothing
 
     for epoch in range(config.NUM_EPOCHS):
 
