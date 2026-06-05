@@ -42,7 +42,7 @@ def predict_lstm(model, tokenizer, texts: list[str], device: str) -> list[str]:
                 max_len=config.MAX_DECODE,
             )
 
-        pred_text = tokenizer.decode(pred_ids)  # ✅ dùng decode từ tokenize_vocab.py
+        pred_text = tokenizer.decode(pred_ids)  
         predictions.append(pred_text)
 
     return predictions
@@ -219,8 +219,8 @@ def main():
     test_df  = pd.read_csv(config.TEST_PATH)
     train_df = pd.read_csv(config.TRAIN_PATH)
 
-    sources    = test_df["input_text"].astype(str).tolist()
-    references = test_df["target_text"].astype(str).tolist()
+    sources    = test_df["source_sentence"].astype(str).tolist()
+    references = test_df["target_sentence"].astype(str).tolist()
     print(f" {len(test_df)} câu test")
 
     print("\n🔍 Đang load mô hình Semantic Similarity...")
@@ -314,3 +314,93 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ==============================================================================
+# DEMO: TỰ NHẬP CÂU ĐỂ DỊCH THỬ
+# ==============================================================================
+
+def demo_interactive(all_preds_models: dict, device: str):
+    """
+    all_preds_models: dict chứa model/tokenizer đã load sẵn
+    {
+      "LSTM": (model, tokenizer),
+      "Rule-based": (train_df,),
+      ...
+    }
+    """
+    print("\n" + "="*60)
+    print("🎤 CHẾ ĐỘ DỊCH THỬ — TỰ NHẬP CÂU")
+    print("="*60)
+    print("Nhập câu phương ngữ miền Nam, gõ 'quit' để thoát.\n")
+
+    while True:
+        user_input = input("📝 Nhập câu: ").strip()
+        if user_input.lower() in ["quit", "exit", "q"]:
+            print("👋 Thoát chế độ dịch thử.")
+            break
+        if not user_input:
+            continue
+
+        print()
+        for model_name, pack in all_preds_models.items():
+            if model_name == "LSTM":
+                model, tokenizer = pack
+                preds = predict_lstm(model, tokenizer, [user_input], device)
+                print(f"  🔷 LSTM             : {preds[0]}")
+
+            elif model_name == "Transformer Full":
+                model, tokenizer = pack
+                preds = predict_transformer(model, tokenizer, [user_input], device)
+                print(f"  🔷 Transformer Full : {preds[0]}")
+
+            elif model_name == "Transformer LoRA":
+                model, tokenizer = pack
+                preds = predict_transformer(model, tokenizer, [user_input], device)
+                print(f"  🔷 Transformer LoRA : {preds[0]}")
+
+            elif model_name == "Rule-based":
+                train_df = pack[0]
+                preds = predict_rule_based(train_df, [user_input])
+                print(f"  🔷 Rule-based       : {preds[0]}")
+        print()
+
+
+if __name__ == "__main__":
+    import sys
+    # Nếu chạy với flag --demo thì chỉ chạy demo, bỏ qua evaluate
+    if "--demo" in sys.argv:
+        import pandas as pd
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"💻 Thiết bị: {device.upper()}")
+
+        train_df = pd.read_csv(config.TRAIN_PATH)
+        loaded_models = {}
+
+        # Load LSTM
+        try:
+            lstm_model, lstm_tok = load_lstm(device)
+            loaded_models["LSTM"] = (lstm_model, lstm_tok)
+        except FileNotFoundError as e:
+            print(f"⚠️  Bỏ qua LSTM: {e}")
+
+        # Load Transformer Full
+        try:
+            full_model, full_tok = load_transformer_full(device)
+            loaded_models["Transformer Full"] = (full_model, full_tok)
+        except FileNotFoundError as e:
+            print(f"⚠️  Bỏ qua Transformer Full: {e}")
+
+        # Load Transformer LoRA
+        try:
+            lora_model, lora_tok = load_transformer_lora(device)
+            loaded_models["Transformer LoRA"] = (lora_model, lora_tok)
+        except FileNotFoundError as e:
+            print(f"⚠️  Bỏ qua Transformer LoRA: {e}")
+
+        # Rule-based luôn có
+        loaded_models["Rule-based"] = (train_df,)
+
+        demo_interactive(loaded_models, device)
+    else:
+        main()
