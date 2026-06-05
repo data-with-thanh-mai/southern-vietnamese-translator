@@ -362,3 +362,71 @@ class Seq2Seq(nn.Module):
 
         return translated_ids
 
+    @torch.no_grad()
+    def translate_beam(
+        self,
+        src      : torch.Tensor,  # (1, src_len)
+        pad_idx  : int,
+        bos_idx  : int,
+        eos_idx  : int,
+        max_len  : int = 50,
+        beam_size: int = 4
+    ) -> list[int]:
+        """
+        Beam Search Decoding — giữ beam_size câu tốt nhất ở mỗi bước.
+        Tốt hơn greedy vì không bị kẹt ở lựa chọn tham lam từng bước.
+        """
+        self.eval()
+        encoder_outputs, hidden, cell = self.encoder(src)
+        src_mask = self.make_src_mask(src, pad_idx)
+
+        # Mỗi beam: (score, token_ids, hidden, cell)
+        beams = [(0.0, [bos_idx], hidden, cell)]
+        completed = []
+
+        for _ in range(max_len):
+            if not beams:
+                break
+
+            all_candidates = []
+
+            for score, tokens, hid, cel in beams:
+                last_token = torch.tensor(
+                    [tokens[-1]], device=self.device
+                )
+                logits, hid_new, cel_new, _ = self.decoder.forward_step(
+                    last_token, hid, cel, encoder_outputs, src_mask
+                )
+
+                # Log-softmax để tính score cộng dồn
+                log_probs = torch.log_softmax(logits, dim=-1).squeeze(0)
+
+                # Lấy top beam_size token tiếp theo
+                topk_log_probs, topk_ids = log_probs.topk(beam_size)
+
+                for log_prob, token_id in zip(
+                    topk_log_probs.tolist(), topk_ids.tolist()
+                ):
+                    new_score  = score + log_prob
+                    new_tokens = tokens + [token_id]
+
+                    if token_id == eos_idx:
+                        # Normalize score theo độ dài để không thiên vị câu ngắn
+                        length_penalty = len(new_tokens) ** 0.6
+                        completed.append((new_score / length_penalty, new_tokens[1:-1]))
+                    else:
+                        all_candidates.append(
+                            (new_score, new_tokens, hid_new, cel_new)
+                        )
+
+            # Giữ lại beam_size beam tốt nhất
+            beams = sorted(all_candidates, key=lambda x: x[0], reverse=True)[:beam_size]
+
+        # Nếu không có beam nào hoàn thành → dùng beam tốt nhất hiện tại
+        if not completed:
+            best = sorted(beams, key=lambda x: x[0], reverse=True)[0]
+            return best[1][1:]  # bỏ BOS
+
+        # Trả về câu có score cao nhất
+        best = sorted(completed, key=lambda x: x[0], reverse=True)[0]
+        return best[1]
