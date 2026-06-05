@@ -44,12 +44,12 @@ MAX_DECODE = 50
 # ==============================================================
 LSTM_CFG = {
     "vocab_size"  : ACTUAL_VOCAB_SIZE,   
-    "embed_dim"   : 256,    
-    "hidden_dim"  : 512,    
-    "n_layers"    : 2,      
+    "embed_dim"   : 512,    
+    "hidden_dim"  : 726,    
+    "n_layers"    : 3,      
     "dropout"     : 0.3,    
     
-    "batch_size"  : 32,
+    "batch_size"  : 16,
     "epochs"      : 20,
     "lr"          : 5e-4,   
     "weight_decay": 1e-4,   
