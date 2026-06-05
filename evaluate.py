@@ -34,15 +34,16 @@ def predict_lstm(model, tokenizer, texts: list[str], device: str) -> list[str]:
         src = torch.tensor([token_ids], dtype=torch.long, device=device)
 
         with torch.no_grad():
-            pred_ids = model.translate_greedy(
+            pred_ids = model.translate_beam(
                 src=src,
                 pad_idx=config.PAD_IDX,
                 bos_idx=config.BOS_IDX,
+                beam_size=config.BEAM_SIZE,
                 eos_idx=config.EOS_IDX,
                 max_len=config.MAX_DECODE,
             )
 
-        pred_text = tokenizer.decode(pred_ids)  
+        pred_text = tokenizer.decode(pred_ids)  # ✅ dùng decode từ tokenize_vocab.py
         predictions.append(pred_text)
 
     return predictions
