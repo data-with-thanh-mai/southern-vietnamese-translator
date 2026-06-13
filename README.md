@@ -70,3 +70,20 @@ Hệ thống huấn luyện trên môi trường phần cứng **GPU Tesla T4 (1
     ├── evaluate.py                     # Script tính toán các thang đo định lượng (BLEU, ROUGE-L)
     ├── plot_loss.py                    # Script vẽ biểu đồ đường cong hội tụ (Learning Curves)
     └── utils.py                        # Chứa các hàm bổ trợ (Optimizer, Scheduler, get_tf_ratio)
+```
+🚀 Hướng dẫn Cài đặt & Sử dụng
+1. Cài đặt môi trường
+Yêu cầu hệ thống cài đặt sẵn Python >= 3.8 và môi trường tính toán CUDA (Khuyến nghị sử dụng GPU Tesla T4 hoặc tương đương).
+Bash pip install -r requirements.txt
+
+2. Khám phá và Tiền xử lý Dữ liệu
+Mở và chạy file Notebook để theo dõi biểu đồ phân phối EDA cấp độ ký tự, số từ và phân tán tương quan độ dài câu:
+Bash jupyter notebook notebooks/01_eda_and_cleaning.ipynb
+
+3. Huấn luyện mô hình
+Chạy cấu trình huấn luyện mô hình 
+Bash python train.py
+
+4. Thử nghiệm dịch câu (Suy luận)
+Sử dụng script translate.py để dịch một câu phương ngữ Miền Tây ngẫu nhiên bằng thuật toán Beam Search (kích thước beam_size = 4):
+Bash python translate.py --text "tao đi mần nha" --method beam
