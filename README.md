@@ -1,8 +1,4 @@
-Ngon lành m ơi! T ráp toàn bộ các mảnh ghép từ nãy đến giờ lại thành một file `README.md` **full option, hoàn chỉnh 100%** không thiếu một chữ nào. Cấu trúc này ôm trọn bộ data 10.511 câu, ảnh EDA mới, con Seq2Seq **36M tham số**, thuật toán tối ưu, hướng dẫn chạy lệnh rạch ròi và cả phần phân tích 4 nhóm lỗi luôn nha.
 
-M copy nguyên si toàn bộ nội dung trong khối code dưới đây tạo thành file `README.md` quăng thẳng vào thư mục gốc của dự án trên GitHub là chốt sổ điểm 10 luôn nè:
-
-```markdown
 # Hệ thống Dịch máy Phương ngữ Miền Tây sang Tiếng Việt Phổ thông: Thử nghiệm đối chứng đa kiến trúc (Comprehensive Benchmark)
 
 Dự án nghiên cứu và xây dựng hệ thống Dịch máy Nơ-ron (NMT) chuyên biệt nhằm chuyển đổi các câu thoại mang đậm đặc trưng phương ngữ Nam Bộ (Đồng bằng sông Cửu Long) về ngôn ngữ tiếng Việt chuẩn phổ thông. Hệ thống thực hiện đánh giá, đối chứng hiệu năng toàn diện qua 4 cấp độ tiếp cận công nghệ có mức độ phức tạp tăng dần.
@@ -176,5 +172,4 @@ Dựa trên việc kiểm tra và gán nhãn thủ công 100 trường hợp d�
 * `pandas`, `numpy` (Xử lý cấu trúc bảng ma trận và dữ liệu)
 * `matplotlib`, `seaborn` (Trực quan hóa đồ thị hội tụ loss và phân phối EDA)
 
-```
 
