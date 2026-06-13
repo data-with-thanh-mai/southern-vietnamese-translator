@@ -28,8 +28,8 @@ def _get_vocab_size(path: str) -> int:
 ACTUAL_VOCAB_SIZE = _get_vocab_size(VOCAB_PATH)
 
 # -----------------------DATA----------------------------------
-MAX_SRC_LEN =  163  
-MAX_TGT_LEN =  145  
+MAX_SRC_LEN =  17
+MAX_TGT_LEN =  19  
 
 PAD_IDX = 0
 UNK_IDX = 1
