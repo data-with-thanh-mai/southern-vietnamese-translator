@@ -1,5 +1,5 @@
 
-# Hệ thống Dịch máy Phương ngữ Miền Tây sang Tiếng Việt Phổ thông: Thử nghiệm đối chứng đa kiến trúc (Comprehensive Benchmark)
+# Hệ thống Dịch máy Phương ngữ Miền Tây sang Tiếng Việt Phổ thông
 
 Dự án nghiên cứu và xây dựng hệ thống Dịch máy Nơ-ron (NMT) chuyên biệt nhằm chuyển đổi các câu thoại mang đậm đặc trưng phương ngữ Nam Bộ (Đồng bằng sông Cửu Long) về ngôn ngữ tiếng Việt chuẩn phổ thông. Hệ thống thực hiện đánh giá, đối chứng hiệu năng toàn diện qua 4 cấp độ tiếp cận công nghệ có mức độ phức tạp tăng dần.
 
