@@ -75,7 +75,7 @@ Hệ thống huấn luyện trên môi trường phần cứng **GPU Tesla T4 (1
     ├── config.py                       # Quản lý tập trung hệ thống siêu tham số (Hyperparameters)
     ├── evaluate.py                     # Script tính toán các thang đo định lượng (BLEU, ROUGE-L)
     ├── plot_loss.py                    # Script vẽ biểu đồ đường cong hội tụ (Learning Curves)
-    └── utils.py                        # Chứa các hàm bổ trợ (Optimizer, Scheduler, get_tf_ratio)
+    └── utils.py                        # Chứa các hàm bổ trợ 
 
 ```
 
